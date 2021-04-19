@@ -27,7 +27,7 @@ class Decoder:
     linesCounter = 0
 
     def __init__(self):
-        self.dartifitialBits = 0
+        self.artifitialBits = 0
         self.fullHeight = 0
         self.fullWidth = 0
         self.N = 0
@@ -147,9 +147,9 @@ class Decoder:
                 # If the second read was not sucessful, it means that buffer contains the last byte of the compressed file
                 if not self.buffer2:
                     #print("oiZ")
-                    if self.artifitialBits:
+                    #if self.artifitialBits:
                         #print("oiY")
-                        self.key = self.key[:(-self.artifitialBits)]
+                        #self.key = self.key[:(-self.artifitialBits)]
                     #print("buffer = " + str((BitArray(self.buffer)).bin))
                     #print("oi2")
                     #self.key += "0"
