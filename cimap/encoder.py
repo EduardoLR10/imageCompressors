@@ -2,6 +2,7 @@ import math
 #import civq.utils as utils
 import sys
 import civq.utils as utils
+import numpy as np
 
 class Encoder:
     # Codebook's size
@@ -20,32 +21,25 @@ class Encoder:
     regions = {}
     indexReconstruct = {}
 
-    def __init__(self, m, l, e):
+    def __init__(self, m, e):
         self.M = m
-        self.L = l
+        self.L = 3
         self.epslon = e
         self.codebook = []
         #print(self.codebook)
 
     def buildInitialCodeBook(self, img):
+
         imgWidth, imgHeight = img.size
 
         initialCodeBook = []
 
-        blocks = (imgHeight * imgWidth) // self.L
-
-        if blocks >= self.M:
-            side = int(math.sqrt(self.L))
-            step = blocks // self.M
-            counter = 1
-            for i in range(0, imgHeight // side):
-                for j in range(0, imgWidth // side):
-                #print(str(j * width) + " " + str(i * height) + " " + str((j + 1) * width) + " " + str((i + 1) * height))
-                    box = (j * side, i * side, ((j + 1) * side), ((i + 1) * side))
-                    cropped = img.crop(box)
-                    if(not (counter % step)):
-                        initialCodeBook.append(list(cropped.getdata()))
-                    counter += 1
+        if imgHeight * imgWidth >= self.M:
+            l = list(img.getdata())
+            step = len(l) // self.M
+            for i in range(0, len(l), step):
+                r, g, b = l[i]
+                initialCodeBook.append([r,g,b])
         else:
             initialCodeBook = self.getUniformInitialCodeBook()
 
@@ -66,22 +60,31 @@ class Encoder:
                 l.append(j)
                 if(not (counter % self.L)):
                     initialCodeBook.append(l)
+                    if len(initialCodeBook) == self.M:
+                        break
                     l = []
                 counter += 1
         else:
             repetition = product // 256
-
+            #print(repetition)
             l = []
-            counter = 1
+            done = False
+            counter = 0
             for j in range(0, 256):
-                for k in range(0, repetition):
+                for k in range(0, max(repetition, 2)):
                     l.append(j)
-                #print(l)
-                #print(counter)
-                if(not (counter % (self.L // repetition))):
-                    initialCodeBook.append(l)
-                    l = []
-                counter += 1
+                    counter += 1
+                    if(not (counter % self.L)):
+                        #print(counter)
+                        #print(l)
+                        initialCodeBook.append(l)
+                        if len(initialCodeBook) == self.M:
+                            done = True
+                            break
+                        l = []
+                    #print(l)
+                if done:
+                    break
         
         return initialCodeBook
     
@@ -166,35 +169,28 @@ class Encoder:
 
         #print(self.codebook)
 
-        vectors = []
-
-        side = int(math.sqrt(self.L))
+        pixels = []
 
         imgWidth, imgHeight = img.size
 
         ## STEP 1 ##
         
         # Generating vectors from image
-        for i in range(0, imgHeight // side):
-            for j in range(0, imgWidth // side):
-                #print(str(j * width) + " " + str(i * height) + " " + str((j + 1) * width) + " " + str((i + 1) * height))
-                box = (j * side, i * side, ((j + 1) * side), ((i + 1) * side))
-                cropped = img.crop(box)
-                
-                vectors.append(list(cropped.getdata()))
-        
+        for r, g, b in list(img.getdata()):
+            pixels.append([r, g, b])
+
         # Starting list of distortions for future comparison
         distortions = [0]
 
         ## STEP 2 ##
         
         # Allocating vector into their regions
-        self.allocateRegions(vectors)
+        self.allocateRegions(pixels)
         #print(self.regions)
         ## STEP 3 ##
         
         # Adding second distortion to start interation
-        size = len(vectors)
+        size = len(pixels)
         distortions.append(self.calculateAverageDistortion(size))
         #print(distortions)
         ## STEP 4 ##
@@ -202,20 +198,20 @@ class Encoder:
         # Updating codebook until error condition is satisfied
         counter = 1
         if distortions[counter] != 0.0:
-            print(((distortions[counter] - distortions[counter - 1]) / distortions[counter]))
+            #print(((distortions[counter] - distortions[counter - 1]) / distortions[counter]))
             while(abs((distortions[counter] - distortions[counter - 1]) / distortions[counter]) > self.epslon):
 
                 ## STEP 5 ##
                 self.updateCodeBook()
 
                 ## BACK TO STEP 2 ##
-                self.allocateRegions(vectors)
+                self.allocateRegions(pixels)
 
                 ## STEP 3 ##
                 next = self.calculateAverageDistortion(size)
                 if next == 0.0:
                     break
-                print(next)
+                #print(next)
                 distortions.append(next)
                 print(distortions)
                 counter += 1
@@ -226,12 +222,12 @@ class Encoder:
             temp = (key,value)
             dictList.append(temp)    """
         
-        for i in range(0, len(vectors)):
+        for i in range(0, len(pixels)):
             indexList.append(self.indexReconstruct[i])
 
         #print(self.regions)
         #print(indexList)
         # Need to send the codebook!
         #print(self.codebook)
-        return (imgHeight, imgWidth, self.L, self.M - 1, self.codebook, indexList)
+        return (imgHeight, imgWidth, self.M - 1, self.codebook, indexList)
         

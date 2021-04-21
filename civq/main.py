@@ -14,13 +14,18 @@ def main():
 
     #N = my_io.getN()
     #M = my_io.getM()
-    M = 256
-    L = 4
+    M = 64
+    L = 16
     E = 0.025
+
+    img = (Image.open(imageFilename)).convert(mode = "L")
 
     e = encoder.Encoder(M, L, E)
 
-    img = (Image.open(imageFilename)).convert(mode = "L")
+    e.buildInitialCodeBook(img)
+
+    #print(list(img.getdata()))
+    #print(e.codebook)
 
     compressedImage = e.encode(img)
 
@@ -40,16 +45,6 @@ def main():
     print(g.calculateMSE(imgWidth, imgHeight, decompressedImage, imageFilename)) """
     """ 
      """
-
-    #result = (Image.open(decompressedImage)).convert(mode = "L")
-    ''' print(decompressedImage)
-
-    box = (72, 504, 76, 508)
-    cropped = img2.crop(box)
-
-    #cropped.show()
-
-    print(list(cropped.getdata())) '''
 
 if __name__ == "__main__":
     main()
